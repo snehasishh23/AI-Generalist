@@ -1,0 +1,6 @@
+{
+  "name": "find-the-promos",
+  "private": true,
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": { "pyodide": "0.27.7" }
+}

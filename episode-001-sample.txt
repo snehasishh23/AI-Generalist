@@ -1,0 +1,24 @@
+--- SCRIPT START ---
+SCENE 01
+Scene heading: INT. CITY HALL - NIGHT
+
+**ACTION:**
+Start: (00:00.00) | End: (00:02.40)
+A guard lunges across the table.
+
+**MAYOR:**
+Start: (00:02.40) | End: (00:07.20)
+"The trial starts at sunrise. Your family will lose everything."
+
+**GUARD:**
+Start: (00:07.20) | End: (00:12.00)
+"The heir gave me a letter proving who paid for the arrest."
+
+**MAYOR:**
+Start: (00:12.00) | End: (00:17.00)
+"Give it to me. We can still settle this before morning."
+
+**ACTION:**
+Start: (00:17.00) | End: (00:24.00)
+The guard reaches into his coat. The mayor raises her dagger as the guard turns.
+--- SCRIPT END ---

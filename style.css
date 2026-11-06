@@ -1,0 +1,19 @@
+:root { color-scheme: light; font: 16px/1.55 system-ui, sans-serif; color: #172b2e; background: #f3f6f2; }
+body { margin: 0; }
+main { max-width: 52rem; padding: clamp(1rem, 5vw, 4rem) 1.25rem; margin: auto; }
+h1 { font-size: clamp(2.5rem, 9vw, 4.5rem); letter-spacing: -.07em; line-height: 1; margin: .3em 0; }
+h2, h3 { line-height: 1.2; }
+.eyebrow { color: #28614d; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; font-size: .8rem; }
+.intro { font-size: 1.2rem; max-width: 35rem; }
+.panel, article { background: #fff; border: 1px solid #ccd9d1; border-radius: .85rem; padding: 1.1rem; margin: 1rem 0; }
+label { display: block; font-weight: 700; margin-bottom: .45rem; }
+input { max-width: 100%; }
+.hint, #summary { color: #435b54; }
+.actions, .result-bar { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem 1rem; }
+.result-bar { justify-content: space-between; }
+button { font: inherit; font-weight: 650; background: #225b48; color: white; border: 1px solid #225b48; border-radius: .45rem; padding: .5rem .85rem; cursor: pointer; }
+button.secondary { background: white; color: #225b48; }
+button:disabled { cursor: default; opacity: .55; }
+#status:empty { display: none; }
+article h3 { margin: 0; }
+article p { margin: .55rem 0 0; overflow-wrap: anywhere; }
