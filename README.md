@@ -46,8 +46,8 @@ OpenAI Codex helped build the tool, run the input pack, and draft the write-up. 
 
 ## Browser prototype and Vercel
 
-Run `npm ci` and `npm run build`, then serve the static `dist` directory (for example, `python3 -m http.server 8000 --directory dist`). Open the page, run the fictional sample or select screenplay files, and download the raw JSON. The browser runs the same Python source in a Web Worker with a self-hosted Pyodide runtime. Selected files and generated results stay in the browser.
+Run `npm ci` and `npm run build`, then serve the static `dist` directory (for example, `python3 -m http.server 8000 --directory dist`). Open the page, run the fictional sample or select screenplay files, and download the raw JSON. The browser runs an equivalent JavaScript implementation of the Python scoring rules in a Web Worker. Selected files and generated results stay in the browser.
 
-Import this repository in Vercel with the repository root as the project root. The checked-in configuration builds to `dist`. It contains only the application, Python runtime and fictional demo. Alternatively, run `vercel deploy --prod` in this source directory after signing in to the Vercel CLI.
+Import this repository in Vercel with the repository root as the project root. The checked-in configuration builds to `dist`. It contains only the application and fictional demo. Alternatively, run `vercel deploy --prod` in this source directory after signing in to the Vercel CLI.
 
-The full pack returned byte-identical CLI and browser-worker JSON under Pyodide. A local browser smoke test returned the fictional sample's 24-second clip, and the worker surfaced a clear error for a malformed screenplay.
+The full pack returned identical parsed results from the CLI and browser scorer. A local browser smoke test returned the fictional sample's 24-second clip, and the worker surfaced a clear error for a malformed screenplay.

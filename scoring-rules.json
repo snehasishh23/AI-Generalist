@@ -1,0 +1,74 @@
+{
+  "HOOKS": [
+    [
+      "physical confrontation",
+      6,
+      "\\b(slap(?:s|ped)?|lunges?|stabs?|strikes?|punch(?:es)?|tackles?|backhands?)\\b"
+    ],
+    [
+      "immediate danger",
+      5,
+      "\\b(screams?|poison(?:ed)?|gunshot|blood-soaked|blade|dagger|execution|kill(?:ed)?)\\b"
+    ],
+    [
+      "betrayal or accusation",
+      5,
+      "\\b(traitor|bastard|betray(?:ed|al)?|fraud|impostor|you lied|adulter\\w*|murderer)\\b"
+    ],
+    [
+      "identity or relationship reveal",
+      5,
+      "\\b(?:i am|i'm|you are|you're|he is|he's|she is|she's) (?:really |actually )?(?:the |a |my |your )(?:real |true )?(?:duke|heir|husband|wife|father|mother|daughter|son|sister|brother)\\b"
+    ],
+    [
+      "coercion",
+      4,
+      "\\b(?:you have no choice|on your knees|seize (?:him|her)|strip (?:him|her) of|sentence (?:him|her) to)\\b"
+    ],
+    [
+      "direct defiance or demand",
+      3,
+      "\\b(how dare you|get out|let (?:him|her|me) go|stop right there|i refuse|i demand|arrest (?:him|her))\\b"
+    ],
+    [
+      "visible distress",
+      2,
+      "\\b(gasps?|collapses?|sobbing|shatters?|bursts? (?:in|open))\\b"
+    ]
+  ],
+  "ENDING": [
+    [
+      "imminent action",
+      6,
+      "\\b(about to|poised to|raises? (?:his|her|the) (?:hand|blade|sword|dagger)|lunges?|before (?:he|she|they) can|cut off mid)\\b"
+    ],
+    [
+      "forced removal",
+      5,
+      "\\b(?:drags?|hauls?|marches?) (?:him|her|them|\\w+) (?:away|out|back|towards?)\\b"
+    ],
+    [
+      "threat or vow",
+      5,
+      "\\b(you will pay|you'll pay|you will regret|i will (?:kill|destroy|expose|find|make)|i'll (?:kill|destroy|expose|find|make)|vengeance|dead by|mark my words)\\b"
+    ],
+    [
+      "new information",
+      4,
+      "\\b(reveal(?:s|ed)?|real(?:ly)? (?:duke|heir)|the truth|secret|you lied|you are the|you're the|traitor|poisoned)\\b"
+    ],
+    [
+      "direct question",
+      3,
+      "\\?\\s*[”\\\"']?\\s*$"
+    ],
+    [
+      "unresolved reaction",
+      2,
+      "\\b(stunned|horrified|frozen|eyes widen|gasps?|tense silence|shocked)\\b"
+    ]
+  ],
+  "CLOSURE": "\\b(smiles? warmly|relief washes|problem solved|forgive you|all is well|reassur\\w*)\\b",
+  "STAKES": "\\b(marry|marriage|wedding|husband|wife|family|trial|arrest|duke|heir|inheritance|kill|poison|betray\\w*)\\b",
+  "DEPENDENT": "^(?:[“\\\"])?(?:and|but|so|then|yes|no|because|as i said)\\b"
+}
