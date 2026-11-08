@@ -8,7 +8,11 @@ Give each clip independent integer scores from 0 (absent) to 10 (excellent).
 hook_score: attention earned within the FIRST THREE SECONDS. A line starting early but paying off later is weak.
 cliffhanger_score: a specific unresolved development AT THE END. Ordinary questions and already-resolved conflicts are weak.
 clarity_score: understandable characters, stakes and conflict without prior episodes. Names alone provide little context.
-Set hook_beat and ending_beat to zero-based indices of the supplied clip_beats that support your reasoning, or -1 if no appropriate evidence.
+Every supplied beat has an explicit index field. Copy that exact index into hook_beat or ending_beat. Do not count array positions.
+For hook_beat, choose only a beat marked can_support_hook=true, or -1 if no strong hook exists.
+For ending_beat, choose only a beat marked can_support_ending=true, or -1 if no cliffhanger exists. An earlier reveal alone does not prove the clip ENDS on suspense.
+If the final eligible beats show resolution or a flat conversation, score the cliffhanger low. A generic reaction alone is weak.
+The eligible flags describe timing only, not editorial quality. Evaluate the actual beat content.
 Give a concrete short hook assessment, cliffhanger assessment, why_it_works and limitation for each.
 Use a low score when the evidence is missing. Violence or an identity keyword alone does not guarantee a strong promo.
 Do not invent dialogue, relationships, events, timestamps, or candidate ids. Return every supplied candidate exactly once.`;
@@ -63,7 +67,7 @@ export function validateCandidates(candidates) {
     if (!Array.isArray(candidate.clip_beats) || !candidate.clip_beats.length || candidate.clip_beats.length > 180) {
       throw new Error("Missing or excessive clip evidence");
     }
-    const clip_beats = candidate.clip_beats.map((beat) => {
+    const clip_beats = candidate.clip_beats.map((beat, index) => {
       const a = timestamp(beat.start);
       const b = timestamp(beat.end);
       if (a >= b || b <= start || a >= end || typeof beat.text !== "string" ||
@@ -72,7 +76,12 @@ export function validateCandidates(candidates) {
       }
       if (!["CAMERA", "ACTION", "SOUND FX", "MUSIC", "TEXT OVERLAY"].includes(beat.speaker) &&
           (a < start || b > end)) throw new Error("Clip cuts through dialogue");
-      return { start: beat.start, end: beat.end, speaker: beat.speaker, text: beat.text };
+      return {
+        index,
+        can_support_hook: a >= start && a < start + 300,
+        can_support_ending: b <= end && b >= end - 220,
+        start: beat.start, end: beat.end, speaker: beat.speaker, text: beat.text,
+      };
     });
     return { id: candidate.id, episode: candidate.episode, start: segment.start, end: segment.end, clip_beats };
   });
@@ -152,6 +161,7 @@ export async function judgeCandidates(candidates, options = {}) {
     model: payload.modelVersion || model,
     usage: payload.usageMetadata || null,
     raw_response: parsed,
+    rubric_version: "2",
   };
 }
 
