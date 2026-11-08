@@ -23,7 +23,9 @@ test("AI cannot add candidates, repeat candidates or return scores outside the r
   const input = validateCandidates([source]);
   assert.throws(() => validateJudgments([{ ...judgment, id: "ep-9-clip-1" }], input));
   assert.throws(() => validateJudgments([{ ...judgment, hook_score: 11 }], input));
-  assert.throws(() => validateJudgments([{ ...judgment, hook_beat: 99 }], input));
+  const [badIndex] = validateJudgments([{ ...judgment, hook_beat: 99 }], input);
+  assert.equal(badIndex.hook_beat, -1);
+  assert.equal(badIndex.hook_evidence_valid, false);
   assert.throws(() => validateJudgments([judgment, judgment], [input[0], input[0]]));
 });
 
