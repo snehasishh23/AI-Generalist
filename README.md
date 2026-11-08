@@ -8,7 +8,7 @@ A hybrid rule + Gemini judge for Kuku's AI Generalist assignment, Problem 1.
 
 Select one or more timestamped screenplay text files named like `episode-001-example.txt`, or try the fictional sample. Rules propose up to three different 20–60 second cuts per episode. With **Add Gemini AI review** enabled, candidate excerpts are sent through the server to Google Gemini. The app chooses one candidate per episode and ranks the choices across the show.
 
-Each result shows the episode, exact cut points, opening and ending script evidence, Gemini's assessment, scores and a limitation. Download the JSON for the rule baseline, all candidate cuts, model responses, usage metadata and final ranking. You can stop AI review or retry remaining candidates after a failure. Successful reviews from the current run stay in memory while the page remains open.
+Each result shows the episode, exact cut points, opening and ending script evidence, Gemini's assessment, scores and a limitation. Download the JSON for the rule baseline, all candidate cuts, model responses, usage metadata and final ranking. Temporary provider failures are retried twice with a short backoff. Quota errors are surfaced immediately. You can stop AI review during a retry or retry remaining candidates after a failure. Successful reviews from the current run stay in memory while the page remains open.
 
 ## How the judges work
 
@@ -33,7 +33,7 @@ The browser UI and server function use Node.js 22+ and Vercel. Set `GEMINI_API_K
 ```sh
 npm ci
 npm run build
-node --test test/judge.test.mjs
+node --test test/*.test.mjs
 npx vercel dev
 ```
 

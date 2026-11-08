@@ -72,22 +72,9 @@ async function reviewWithAI() {
       status.textContent = "Gemini reviewing candidates · " + reviews.length + "/" +
         baseline.candidates.length + " complete…";
       const batch = pending.slice(offset, offset + 10);
-      const response = await fetch("/api/judge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({ candidates: batch }),
+      const data = await requestJudgeBatch(batch, controller.signal, (retry) => {
+        status.textContent = "Gemini is temporarily busy. Retrying this batch (" + retry + "/2)…";
       });
-      let data;
-      try { data = await response.json(); } catch {
-        throw new Error("The AI service could not be reached.");
-      }
-      if (!response.ok) {
-        const dailyLimit = data.quota_limits?.some((limit) => limit.includes("PerDay"));
-        throw new Error(dailyLimit
-          ? "Gemini daily quota reached. Retry after the provider resets it."
-          : data.error || "AI review failed.");
-      }
       const batchIds = new Set(batch.map((candidate) => candidate.id));
       if (!Array.isArray(data.judgments) || data.judgments.length !== batchIds.size ||
           new Set(data.judgments.map((judgment) => judgment.id)).size !== batchIds.size ||
