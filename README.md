@@ -14,7 +14,7 @@ Each result shows the episode, exact cut points, opening and ending script evide
 
 The rule engine parses integer timestamps, excludes cuts through dialogue and searches windows at beat boundaries. English cues favor confrontations, danger, betrayal and imminent action. A duration preference and dialogue context proxy complete the rule score. It greedily selects three windows with overlap-over-union no greater than 0.65.
 
-Gemini judges the actual excerpt for hook strength within three seconds, unresolved suspense at the ending and clarity for a new viewer. It returns integer scores from 0 to 10, a reason, a limitation and zero-based references to supplied script beats. It cannot change the candidate timestamps. Code rejects unknown candidate ids, duplicate ids, incomplete responses, invalid scores and invalid beat indices. References outside opening/ending timing constraints force editorial review.
+Gemini judges the actual excerpt for hook strength within three seconds, unresolved suspense at the ending and clarity for a new viewer. It returns integer scores from 0 to 10, a reason, a limitation and explicit index references to supplied script beats. Each beat is annotated with opening/ending timing eligibility. It cannot change the candidate timestamps. Code rejects unknown candidate ids, duplicate ids, incomplete responses, invalid scores. Invalid beat indices are normalized to missing evidence and force editorial review, while the raw model response is retained. References outside opening/ending timing constraints force editorial review.
 
 The combined score uses 75% Gemini and 25% rules. Gemini's component weights hook and cliffhanger at 40% each and clarity at 20%. Rule scores are scaled against 44 and clamped to 0–100. These weights and thresholds are implementation choices, without audience-metric calibration. A Gemini score below 6 on any dimension or invalid timed evidence marks a selection for review. Reviewed candidates appear before rule-only fallbacks, with passing selections first within those groups.
 
@@ -28,7 +28,7 @@ The offline Python baseline needs Python 3.10+ with no packages.
 python3 find_promos.py "/path/to/screenplays" --out raw_outputs/promos.json
 ```
 
-The browser UI and server function use Node.js 22+ and Vercel. Set `GEMINI_API_KEY` as a **Production secret** in the Vercel project. Optionally set `GEMINI_MODEL` to a compatible Gemini model. The default is `gemini-3.5-flash`. Keep secrets in Vercel or ignored local environment files.
+The browser UI and server function use Node.js 22+ and Vercel. Set `GEMINI_API_KEY` as a **Production secret** in the Vercel project. Optionally set `GEMINI_MODEL` to a compatible Gemini model. The default is `gemini-3.5-flash-lite`. Keep secrets in Vercel or ignored local environment files.
 
 ```sh
 npm ci
@@ -46,3 +46,5 @@ The API batches up to ten candidates and bounds request size, script lengths, mo
 The original rule baseline scanned all 50 provided episodes and parsed 3,727 beats. Its browser and Python results matched. The updated shortlist yields 150 candidates across the same episodes. Hard timing constraints are validated before judging. The tests exercise hallucinated ids, score ranges, evidence timing, dialogue boundaries, API failures and selection changes.
 
 OpenAI Codex helped implement, test and document the tool. During initial development, a confrontation rule mistook a judge striking a gavel for violence, which prompted a narrow correction. Runtime semantic judging is performed by Gemini with an explicit rubric and structured response schema. Source screenplays and outputs containing Kuku excerpts are shared separately with reviewers.
+
+The final full-pack run obtained 150 Gemini Flash-Lite reviews, selected 50 clips, flagged nine selections and changed the preferred cut in 15 episodes. An initial run exposed frequent incorrect ending references. Explicit beat indices and timing eligibility were added, and the final run retained three invalid references for editorial review. A model change followed the first model's daily free-tier quota limit. Both runs are preserved for audit. These measurements describe this run's selections and validation, with audience impact awaiting editor and viewer evaluation.

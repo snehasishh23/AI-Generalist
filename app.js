@@ -82,13 +82,18 @@ async function reviewWithAI() {
       try { data = await response.json(); } catch {
         throw new Error("The AI service could not be reached.");
       }
-      if (!response.ok) throw new Error(data.error || "AI review failed.");
+      if (!response.ok) {
+        const dailyLimit = data.quota_limits?.some((limit) => limit.includes("PerDay"));
+        throw new Error(dailyLimit
+          ? "Gemini daily quota reached. Retry after the provider resets it."
+          : data.error || "AI review failed.");
+      }
       const batchIds = new Set(batch.map((candidate) => candidate.id));
       if (!Array.isArray(data.judgments) || data.judgments.length !== batchIds.size ||
           new Set(data.judgments.map((judgment) => judgment.id)).size !== batchIds.size ||
           data.judgments.some((judgment) => !batchIds.has(judgment.id))) throw new Error("Incomplete AI review.");
       reviews.push(...data.judgments);
-      batches.push({ model: data.model, usage: data.usage, raw_response: data.raw_response, candidate_ids: [...batchIds] });
+      batches.push({ model: data.model, usage: data.usage, rubric_version: data.rubric_version, raw_response: data.raw_response, candidate_ids: [...batchIds] });
       show(combineJudgments(baseline, reviews, batches));
     }
     status.textContent = "Combined rule + Gemini review complete.";
