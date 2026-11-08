@@ -4,7 +4,7 @@ self.onmessage = async ({ data: files }) => {
     importScripts("scorer.js");
     const response = await fetch("scoring-rules.json");
     if (!response.ok) throw new Error("Could not load the scoring rules.");
-    const data = rankPromos(files, await response.json());
+    const data = rankPromos(files, await response.json(), 3);
     self.postMessage({ raw: JSON.stringify(data, null, 2) + "\n" });
   } catch (error) {
     self.postMessage({ error: error.message });

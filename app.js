@@ -4,8 +4,15 @@ const sample = document.querySelector("#sample");
 const status = document.querySelector("#status");
 const results = document.querySelector("#results");
 const list = document.querySelector("#list");
+const aiEnabled = document.querySelector("#ai-enabled");
+const reviewButton = document.querySelector("#review");
+const cancelButton = document.querySelector("#cancel");
 let busy = false;
 let rawOutput;
+let baseline;
+let reviews = [];
+let batches = [];
+let controller;
 
 function append(parent, tag, text) {
   const node = document.createElement(tag);
@@ -13,36 +20,99 @@ function append(parent, tag, text) {
   parent.append(node);
 }
 
-function show(raw) {
-  const data = JSON.parse(raw);
+function show(data) {
   const flagged = data.promos.filter((promo) => promo.needs_review).length;
   document.querySelector("#summary").textContent =
-    `${data.episodes_scanned} episodes scanned · ${data.promos.length} candidates · ${flagged} flagged for review`;
+    data.episodes_scanned + " episodes scanned · " + data.promos.length + " selected clips · " +
+    flagged + " flagged for review" +
+    (data.ai ? " · Gemini reviewed " + data.ai.reviewed_candidates + "/" + data.ai.candidate_count + " candidates" : " · Rules only");
   list.replaceChildren();
   for (const promo of data.promos) {
     const article = document.createElement("article");
-    append(article, "h3", `#${promo.rank} · Episode ${promo.episode}`);
+    append(article, "h3", "#" + promo.rank + " · Episode " + promo.episode);
     for (const segment of promo.segments) {
-      append(article, "p", `${segment.start}–${segment.end} · ${promo.duration_seconds}s`);
+      append(article, "p", segment.start + "–" + segment.end + " · " + promo.duration_seconds + "s");
     }
-    append(article, "p", `Hook — ${promo.hook.script_evidence}`);
-    append(article, "p", `Cliffhanger — ${promo.cliffhanger.script_evidence}`);
+    append(article, "p", promo.ai_review ? "Judged by rules + Gemini" : "Judged by rules only");
+    append(article, "p", "Hook — " + promo.hook.script_evidence);
+    if (promo.hook.ai_assessment) append(article, "p", promo.hook.ai_assessment);
+    append(article, "p", "Cliffhanger — " + promo.cliffhanger.script_evidence);
+    if (promo.cliffhanger.ai_assessment) append(article, "p", promo.cliffhanger.ai_assessment);
     append(article, "p", promo.why_it_works);
     append(article, "p", promo.posting_rationale);
+    if (promo.ai_review) append(article, "p", "AI limitation — " + promo.ai_review.limitation);
+    if (promo.ai_review && (!promo.ai_review.hook_evidence_valid || !promo.ai_review.ending_evidence_valid)) {
+      append(article, "p", "AI evidence needs review. An opening or ending reference fell outside the allowed timing.");
+    }
     if (promo.needs_review) append(article, "p", "Needs editorial review");
     list.append(article);
   }
-  rawOutput = raw;
+  rawOutput = JSON.stringify(data, null, 2) + "\n";
   results.hidden = false;
+  reviewButton.hidden = !baseline?.candidates?.length ||
+    reviews.length === baseline.candidates.length;
+}
+
+function setBusy(value) {
+  busy = value;
+  files.disabled = sample.disabled = aiEnabled.disabled = reviewButton.disabled = value;
+  analyze.disabled = value || files.files.length === 0;
+  cancelButton.hidden = !value || !controller;
+}
+
+async function reviewWithAI() {
+  if (busy && controller) return;
+  if (!baseline?.candidates.length) return;
+  controller = new AbortController();
+  setBusy(true);
+  const completed = new Set(reviews.map((review) => review.id));
+  const pending = baseline.candidates.filter((candidate) => !completed.has(candidate.id));
+  try {
+    for (let offset = 0; offset < pending.length; offset += 10) {
+      status.textContent = "Gemini reviewing candidates · " + reviews.length + "/" +
+        baseline.candidates.length + " complete…";
+      const batch = pending.slice(offset, offset + 10);
+      const response = await fetch("/api/judge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ candidates: batch }),
+      });
+      let data;
+      try { data = await response.json(); } catch {
+        throw new Error("The AI service could not be reached.");
+      }
+      if (!response.ok) throw new Error(data.error || "AI review failed.");
+      const batchIds = new Set(batch.map((candidate) => candidate.id));
+      if (!Array.isArray(data.judgments) || data.judgments.length !== batchIds.size ||
+          new Set(data.judgments.map((judgment) => judgment.id)).size !== batchIds.size ||
+          data.judgments.some((judgment) => !batchIds.has(judgment.id))) throw new Error("Incomplete AI review.");
+      reviews.push(...data.judgments);
+      batches.push({ model: data.model, usage: data.usage, raw_response: data.raw_response, candidate_ids: [...batchIds] });
+      show(combineJudgments(baseline, reviews, batches));
+    }
+    status.textContent = "Combined rule + Gemini review complete.";
+  } catch (error) {
+    show(combineJudgments(baseline, reviews, batches));
+    status.textContent = error.name === "AbortError"
+      ? "AI review stopped. Completed reviews and rule results are available."
+      : error.message + " Completed reviews and rule results are available.";
+  } finally {
+    controller = undefined;
+    setBusy(false);
+  }
 }
 
 async function run(selection) {
-  busy = true;
-  files.disabled = analyze.disabled = sample.disabled = true;
+  setBusy(true);
   results.hidden = true;
   list.replaceChildren();
+  baseline = undefined;
+  reviews = [];
+  batches = [];
   rawOutput = undefined;
-  status.textContent = "Loading the analysis engine…";
+  reviewButton.hidden = true;
+  status.textContent = "Finding candidate clips…";
   let worker;
   try {
     const inputs = await selection();
@@ -56,18 +126,20 @@ async function run(selection) {
       worker.onerror = () => reject(new Error("Could not load the analysis engine."));
       worker.postMessage(inputs);
     });
-    show(raw);
-    status.textContent = "Analysis complete.";
+    baseline = JSON.parse(raw);
+    show(baseline);
+    status.textContent = "Rule selection complete.";
+    if (aiEnabled.checked) await reviewWithAI();
   } catch (error) {
     status.textContent = error.message;
   } finally {
     worker?.terminate();
-    busy = false;
-    files.disabled = sample.disabled = false;
-    analyze.disabled = files.files.length === 0;
+    setBusy(false);
   }
 }
 
+reviewButton.addEventListener("click", reviewWithAI);
+cancelButton.addEventListener("click", () => controller?.abort());
 files.addEventListener("change", () => {
   analyze.disabled = busy || files.files.length === 0;
 });

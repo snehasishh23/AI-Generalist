@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Find the Promos</title>
   <link rel="stylesheet" href="style.css">
+  <script src="hybrid.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -15,10 +16,16 @@
     <section class="panel" aria-label="Analyze screenplays">
       <label for="files">Select screenplay files</label>
       <input id="files" type="file" accept=".txt,text/plain" multiple>
-      <p class="hint">Select files named like <code>episode-001-example.txt</code>. The analysis runs on this device.</p>
+      <p class="hint">Select files named like <code>episode-001-example.txt</code>. Rules find up to three candidate clips per episode on this device.</p>
+      <label class="choice"><input id="ai-enabled" type="checkbox" checked> Add Gemini AI review</label>
+      <p class="hint">AI review sends candidate script excerpts through this app to Google Gemini to assess the story and rerank the clips.</p>
       <div class="actions">
-        <button id="analyze" type="button" disabled>Rank promos</button>
+        <button id="analyze" type="button" disabled>Find and judge promos</button>
         <button id="sample" type="button" class="secondary">Try a fictional sample</button>
+      </div>
+      <div class="actions">
+        <button id="review" type="button" class="secondary" hidden>Review remaining candidates with AI</button>
+        <button id="cancel" type="button" class="secondary" hidden>Stop AI review</button>
       </div>
       <p id="status" role="status"></p>
     </section>

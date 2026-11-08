@@ -1,53 +1,48 @@
 # Find the Promos
 
-A command-line prototype for Kuku's AI Generalist assignment, Problem 1. It scans timestamped microdrama screenplays and ranks candidate clips for editorial review.
+A hybrid rule + Gemini judge for Kuku's AI Generalist assignment, Problem 1.
 
-## Run
+[Open the deployed app](https://find-the-promos.vercel.app/)
 
-Requires Python 3.10+ and no packages, credentials or network access.
+## Use the app
+
+Select one or more timestamped screenplay text files named like `episode-001-example.txt`, or try the fictional sample. Rules propose up to three different 20–60 second cuts per episode. With **Add Gemini AI review** enabled, candidate excerpts are sent through the server to Google Gemini. The app chooses one candidate per episode and ranks the choices across the show.
+
+Each result shows the episode, exact cut points, opening and ending script evidence, Gemini's assessment, scores and a limitation. Download the JSON for the rule baseline, all candidate cuts, model responses, usage metadata and final ranking. You can stop AI review or retry remaining candidates after a failure. Successful reviews from the current run stay in memory while the page remains open.
+
+## How the judges work
+
+The rule engine parses integer timestamps, excludes cuts through dialogue and searches windows at beat boundaries. English cues favor confrontations, danger, betrayal and imminent action. A duration preference and dialogue context proxy complete the rule score. It greedily selects three windows with overlap-over-union no greater than 0.65.
+
+Gemini judges the actual excerpt for hook strength within three seconds, unresolved suspense at the ending and clarity for a new viewer. It returns integer scores from 0 to 10, a reason, a limitation and zero-based references to supplied script beats. It cannot change the candidate timestamps. Code rejects unknown candidate ids, duplicate ids, incomplete responses, invalid scores and invalid beat indices. References outside opening/ending timing constraints force editorial review.
+
+The combined score uses 75% Gemini and 25% rules. Gemini's component weights hook and cliffhanger at 40% each and clarity at 20%. Rule scores are scaled against 44 and clamped to 0–100. These weights and thresholds are implementation choices, without audience-metric calibration. A Gemini score below 6 on any dimension or invalid timed evidence marks a selection for review. Reviewed candidates appear before rule-only fallbacks, with passing selections first within those groups.
+
+AI assesses only the rule-generated shortlist. It can miss a better scene excluded by the rules, misjudge story meaning or vary between runs. Script timing still needs verification against footage. Editor acceptance and later retention/click-through data would provide stronger evaluation.
+
+## Run and deploy
+
+The offline Python baseline needs Python 3.10+ with no packages.
 
 ```sh
 python3 find_promos.py "/path/to/screenplays" --out raw_outputs/promos.json
 ```
 
-Use one UTF-8 text file per episode, named like `episode-001-example.txt`. The tool expects tagged timestamp blocks in this format.
+The browser UI and server function use Node.js 22+ and Vercel. Set `GEMINI_API_KEY` as a **Production secret** in the Vercel project. Optionally set `GEMINI_MODEL` to a compatible Gemini model. The default is `gemini-3.5-flash`. Keep secrets in Vercel or ignored local environment files.
 
-```text
-**ACTION:**
-Start: (00:00.00) | End: (00:02.40)
-A guard lunges across the table.
+```sh
+npm ci
+npm run build
+node --test test/judge.test.mjs
+npx vercel dev
 ```
 
-Use speaker tags for dialogue and `ACTION` or `CAMERA` for visual beats. The input pack and the screenplay-derived output are distributed separately from this public repo. The output includes script excerpts, so use an appropriate location when sharing it.
+Use `npx vercel deploy --prod` to deploy the repository root. The `api/judge.mjs` server function needs a Vercel source deployment. A static folder upload alone cannot run the API.
 
-## Read the results
+The API batches up to ten candidates and bounds request size, script lengths, model output and timeout. Model availability, quota and usage cost depend on the configured Google account. If AI fails, the UI keeps completed reviews and rule-only suggestions and labels their source.
 
-- `coverage` reports every scanned episode and its parsed beat count.
-- `promos` lists up to one continuous segment per episode. Each entry includes a global rank, ordered episode/start/end coordinates, duration, opening and ending evidence, and scoring rationale.
-- `needs_review` marks clips that fell below a hook, ending or standalone-context threshold. They appear after clips that clear all three thresholds. Treat both groups as suggestions for an editor.
+## Quality and AI disclosure
 
-## How it works
+The original rule baseline scanned all 50 provided episodes and parsed 3,727 beats. Its browser and Python results matched. The updated shortlist yields 150 candidates across the same episodes. Hard timing constraints are validated before judging. The tests exercise hallucinated ids, score ranges, evidence timing, dialogue boundaries, API failures and selection changes.
 
-The parser converts timestamps to integer hundredths of a second. The selector searches 20–60-second windows at beat boundaries, excluding cuts inside tagged dialogue. It scores opening beats that begin within three seconds, ending beats that finish near the cut, and dialogue that conveys recognizable stakes. Hook and ending scores receive the most weight. A small penalty favors short gaps around the evidence and durations near 34 seconds. A scorer can be replaced by implementing the `hook`, `ending` and `context` methods used by `select`.
-
-One continuous clip per episode gives a simple review queue and avoids assumptions about cross-episode continuity. The scoring rules rely on English text and screenplay timestamps. Video playback is needed to confirm whether a cue lands within the first three seconds or a cut feels clean.
-
-## Validation
-
-The prototype parsed 3,727 timed beats from 50 episodes and generated 50 ranked candidates. All clips passed duration, timestamp, dialogue-boundary and evidence-position checks. The run reproduced identical results on the same files. Three clips passed every scoring threshold. The other 47 were flagged for review.
-
-Keyword scoring sometimes mistakes a generic question for suspense and misses a threat expressed as a metaphor. During development, the physical-confrontation rule scored a judge striking a gavel as a strong opener. A narrow guard removed that trigger. The score represents editorial signals and has not been validated against audience retention or conversion.
-
-The shipped prototype runs locally with zero API cost. For longer scripts or more shows, episodes can be processed independently. A semantic scorer could rerank the best few windows per episode to assess standalone clarity and unresolved stakes. Keep timestamp and dialogue-boundary validation in code, and send the resulting shortlist to an editor for video review.
-
-## AI use
-
-OpenAI Codex helped build the tool, run the input pack, and draft the write-up. The prototype uses deterministic rules at runtime.
-
-## Browser prototype and Vercel
-
-Run `npm ci` and `npm run build`, then serve the static `dist` directory (for example, `python3 -m http.server 8000 --directory dist`). Open the page, run the fictional sample or select screenplay files, and download the raw JSON. The browser runs an equivalent JavaScript implementation of the Python scoring rules in a Web Worker. Selected files and generated results stay in the browser.
-
-Import this repository in Vercel with the repository root as the project root. The checked-in configuration builds to `dist`. It contains only the application and fictional demo. Alternatively, run `vercel deploy --prod` in this source directory after signing in to the Vercel CLI.
-
-The full pack returned identical parsed results from the CLI and browser scorer. A local browser smoke test returned the fictional sample's 24-second clip, and the worker surfaced a clear error for a malformed screenplay.
+OpenAI Codex helped implement, test and document the tool. During initial development, a confrontation rule mistook a judge striking a gavel for violence, which prompted a narrow correction. Runtime semantic judging is performed by Gemini with an explicit rubric and structured response schema. Source screenplays and outputs containing Kuku excerpts are shared separately with reviewers.

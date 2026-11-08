@@ -54,7 +54,7 @@ function evidence(beat, cue) {
   return { cue, start: timecode(beat.start), end: timecode(beat.end), speaker: beat.speaker, script_evidence: beat.text };
 }
 
-function select(beats, rules) {
+function select(beats, rules, limit = 1) {
   const dialogue = beats.filter((beat) => !nonDialogue.has(beat.speaker));
   const story = beats.filter((beat) => !nonStory.has(beat.speaker));
   const hooks = story.map((beat) => {
@@ -75,6 +75,7 @@ function select(beats, rules) {
   const ends = [...new Set(story.map((beat) => beat.end).filter(clean))].sort((a, b) => a - b);
   const duration = Math.max(...beats.map((beat) => beat.end));
   let best = null;
+  const windows = [];
   for (const start of starts) {
     const opening = hooks.reduce((top, item, index) => {
       if (item.beat.start < start || item.beat.start >= start + 300) return top;
@@ -98,11 +99,29 @@ function select(beats, rules) {
         + Number(end === duration) - Math.abs(length - 3400) / 1000
         - (opening.beat.start - start + end - closing.beat.end) / 250;
       const key = [score, opening.weight, closing.weight, -start, -end];
-      if (!best || compare(key, best.key) > 0) best = { key, start, end, opening, closing, context };
+      const window = { key, start, end, opening, closing, context };
+      if (limit > 1) windows.push(window);
+      if (!best || compare(key, best.key) > 0) best = window;
     }
   }
-  if (!best) return null;
-  const { key, start, end, opening, closing, context } = best;
+  if (!best) return limit === 1 ? null : [];
+  if (limit === 1) return promoFromWindow(best);
+  windows.sort((a, b) => compare(b.key, a.key));
+  const chosen = [];
+  for (const window of windows) {
+    const overlaps = chosen.some((other) => {
+      const intersection = Math.max(0, Math.min(window.end, other.end) - Math.max(window.start, other.start));
+      const union = Math.max(window.end, other.end) - Math.min(window.start, other.start);
+      return intersection / union > 0.65;
+    });
+    if (!overlaps) chosen.push(window);
+    if (chosen.length === limit) break;
+  }
+  return chosen.map(promoFromWindow);
+}
+
+function promoFromWindow(window) {
+  const { key, start, end, opening, closing, context } = window;
   const review = opening.weight < 4 || closing.weight < 4 || context < 2;
   return {
     segments: [{ start: timecode(start), end: timecode(end) }],
@@ -121,7 +140,7 @@ function select(beats, rules) {
   };
 }
 
-function rankPromos(files, rawRules) {
+function rankPromos(files, rawRules, alternatives = 1) {
   const compile = (rows) => rows.map(([label, weight, pattern]) => [label, weight, new RegExp(pattern, "i")]);
   const rules = {
     hooks: compile(rawRules.HOOKS), ending: compile(rawRules.ENDING),
@@ -131,6 +150,7 @@ function rankPromos(files, rawRules) {
   };
   const coverage = [];
   const promos = [];
+  const candidates = [];
   const seen = new Set();
   for (const file of [...files].sort((a, b) => compare([a.name], [b.name]))) {
     const match = /^episode-(\d+)(?=[-.])[^/\\]*\.txt$/.exec(file.name);
@@ -139,8 +159,20 @@ function rankPromos(files, rawRules) {
     if (seen.has(episode)) throw new Error("Multiple scripts share an episode number");
     seen.add(episode);
     const beats = parse(file);
-    const result = select(beats, rules);
-    coverage.push({ episode, parsed_beats: beats.length, candidate: result !== null });
+    const selection = select(beats, rules, alternatives);
+    const options = alternatives === 1 ? (selection ? [selection] : []) : selection;
+    const result = options[0];
+    if (alternatives > 1) {
+      for (const [index, option] of options.entries()) {
+        option.episode = option.segments[0].episode = episode;
+        option.id = `ep-${episode}-clip-${index + 1}`;
+        const { start, end } = option.segments[0];
+        option.clip_beats = beats.filter((beat) => beat.end > ticks(start) && beat.start < ticks(end))
+          .map((beat) => ({ ...beat, start: timecode(beat.start), end: timecode(beat.end) }));
+        candidates.push(option);
+      }
+    }
+    coverage.push({ episode, parsed_beats: beats.length, candidate: Boolean(result) });
     if (result) {
       result.episode = result.segments[0].episode = episode;
       promos.push(result);
@@ -148,5 +180,7 @@ function rankPromos(files, rawRules) {
   }
   promos.sort((a, b) => a.needs_review - b.needs_review || b.score - a.score || a.episode - b.episode);
   promos.forEach((promo, index) => { promo.rank = index + 1; });
-  return { episodes_scanned: files.length, coverage, promos };
+  const output = { episodes_scanned: files.length, coverage, promos };
+  if (alternatives > 1) output.candidates = candidates;
+  return output;
 }

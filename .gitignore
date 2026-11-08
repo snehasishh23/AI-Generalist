@@ -3,3 +3,8 @@ dist/
 .vercel/
 __pycache__/
 raw_outputs/
+
+.env
+.env.*
+.vercel
+.env*

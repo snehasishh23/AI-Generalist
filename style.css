@@ -17,3 +17,7 @@ button:disabled { cursor: default; opacity: .55; }
 #status:empty { display: none; }
 article h3 { margin: 0; }
 article p { margin: .55rem 0 0; overflow-wrap: anywhere; }
+.choice { margin-top: 1rem; font-weight: 600; }
+.choice input { margin-right: .4rem; }
+.actions + .actions { margin-top: .6rem; }
+[hidden] { display: none !important; }
