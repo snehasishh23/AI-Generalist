@@ -53,6 +53,10 @@ test("Gemini requests use a server credential and structured output", async () =
       assert.ok(!url.includes("test-key"));
       const body = JSON.parse(options.body);
       assert.equal(body.generationConfig.responseMimeType, "application/json");
+      const supplied = JSON.parse(body.contents[0].parts[0].text).candidates[0];
+      assert.equal(supplied.clip_beats[2].index, 2);
+      assert.equal(supplied.clip_beats[2].can_support_ending, true);
+      assert.equal(supplied.clip_beats[0].can_support_ending, false);
       return new Response(JSON.stringify({
         candidates: [{ finishReason: "STOP", content: { parts: [{ text: JSON.stringify({ judgments: [judgment] }) }] } }],
         modelVersion: "test-model",
